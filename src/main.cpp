@@ -63,10 +63,13 @@ float lastFanCurrent = 0;
 float lastFuelCurrent = 0;
 float lastWaterCurrent = 0;
 float lastMainCurrent = 0;
-// int count = 0;
-// int countImaginary = 0;
 
 int lastTime = 0;
+
+void changeFanState(slewCtrl state) {
+  lastFanState = fanState;
+  fanState = state;
+}
 
 void loop() {
   int dT = millis() - lastTime;
@@ -76,34 +79,35 @@ void loop() {
   switch (fanState) {
     case slewCtrl::ACCEL:
       if (fanSpeed >= fanTargetSpeed) {
-        fanState = slewCtrl::MAX;
+        changeFanState(slewCtrl::MAX);
       }
       break;
     case slewCtrl::MAX:
       if (lastFanState != slewCtrl::MAX) {
         startTime = millis();
+        changeFanState(slewCtrl::MAX);
       }
       if (millis() - startTime >= 2000) {
-        fanState = slewCtrl::DECEL;
+        changeFanState(slewCtrl::DECEL);
       }
       break;
     case slewCtrl::DECEL:
       if (fanSpeed <= 0) {
-        fanState = slewCtrl::STOP;
+        changeFanState(slewCtrl::STOP);
       }
       break;
     case slewCtrl::STOP:
       if (lastFanState != slewCtrl::STOP) {
         startTime = millis();
+        changeFanState(slewCtrl::STOP);
       }
       if (millis() - startTime >= 2000) {
-        fanState = slewCtrl::ACCEL;
+        changeFanState(slewCtrl::ACCEL);
       }
       break;
   }
-  lastFanState = fanState;
 
-  // base fan slew state machine
+  // fan slew state machine
   switch (fanState) {
     case slewCtrl::ACCEL:
       fanSpeed += (slewRate * dT);
