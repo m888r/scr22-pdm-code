@@ -173,7 +173,7 @@ namespace SCRCAN {
     }
 
     // STBY pin on MCP2561 transceiver they need to be set HIGH
-    if (pin != -1) {
+    if (pin != nullptr) {
       pinMode(pin, OUTPUT);
       digitalWrite(pin, HIGH);
     }
