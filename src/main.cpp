@@ -3,7 +3,9 @@
 #include<ADC_util.h>
 
 #define _TASK_MICRO_RES
-#include "TaskScheduler.h" // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
+#include <TaskScheduler.h> // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
+
+#include <SCRCAN.hpp>
 
 ///// ADC0 ////
 ADC *adc = new ADC(); // adc object;
@@ -21,6 +23,8 @@ uint8_t CTRL = 9; // 9 fuel, 21 h2o, 22 fan
 int i = 0;
 
 void setup() {
+  SCRCAN::init();
+
   Serial.begin(9600);
   pinMode(A3, INPUT); // CURR_FUEL
   pinMode(A2, INPUT); // CURR_H2O
@@ -141,6 +145,8 @@ void loop() {
     Serial.printf("fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
+
+  SCRCAN::loop();
 
   delayMicroseconds(50);  
 }
