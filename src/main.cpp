@@ -142,7 +142,7 @@ void loop() {
 
   if (millis() - lastPrint >= 1) {
     lastPrint = millis();
-    Serial.printf("fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
 
