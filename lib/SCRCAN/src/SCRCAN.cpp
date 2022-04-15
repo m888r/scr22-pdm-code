@@ -153,7 +153,7 @@ namespace SCRCAN {
 
   };
 
-  void init(int8_t pin)
+  void init(int pin)
   {
     //----------------- CAN Init -----------------//
 
@@ -173,7 +173,7 @@ namespace SCRCAN {
     }
 
     // STBY pin on MCP2561 transceiver they need to be set HIGH
-    if (pin != nullptr) {
+    if (pin != -1) {
       pinMode(pin, OUTPUT);
       digitalWrite(pin, HIGH);
     }

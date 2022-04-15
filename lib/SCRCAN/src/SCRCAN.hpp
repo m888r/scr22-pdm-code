@@ -64,7 +64,7 @@ namespace SCRCAN
    * 
    * @param pin MCP2561 STBY pin if needed
    */
-  void init(int8_t pin = nullptr);
+  void init(int pin = -1);
 
   /**
    * @brief loop to retrieve CAN data and store
