@@ -23,9 +23,10 @@ uint8_t CTRL = 9; // 9 fuel, 21 h2o, 22 fan
 int i = 0;
 
 void setup() {
+  Serial.begin(9600);
+
   SCRCAN::init();
 
-  Serial.begin(9600);
   pinMode(A3, INPUT); // CURR_FUEL
   pinMode(A2, INPUT); // CURR_H2O
   pinMode(A1, INPUT); // CURR_FAN
