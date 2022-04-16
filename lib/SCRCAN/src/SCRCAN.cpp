@@ -144,27 +144,27 @@ namespace SCRCAN {
     z_yaw = 0.015258789 * long((256 * long(frame.data[4]) + frame.data[5]));
   }
 
-  const ACANPrimaryFilter primaryFilters[] = {
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A000, handleMessage_0), // 0x01F0A000 0xF88A000
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A003, handleMessage_1),
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A004, handleMessage_2), // oil pressure
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A005, handleMessage_3), // launch active (laungh ramp time?)
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A007, handleMessage_4), // oil temp logging
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A008, handleMessage_5), // launch rpm fuel cut
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A010, handleMessage_6), // Sparkcut fuelcut
-      ACANPrimaryFilter(kData, kExtended, 0x01F0A012, handleMessage_7), // tc_slip measured
-      ACANPrimaryFilter(kData, kExtended, 0x0000A0000, handleMessage_8),
-      ACANPrimaryFilter(kData, kExtended, 0x0000A0001, handleMessage_9),
-      ACANPrimaryFilter(kData, kExtended, 0x0000A0003, handleMessage_10),
-      ACANPrimaryFilter(kData, kExtended, 0x0000A0004, handleMessage_11)
-
-  };
-
   void init(int pin)
   {
     //----------------- CAN Init -----------------//
 
     settings.mListenOnlyMode = true;
+
+    const ACANPrimaryFilter primaryFilters[] = {
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A000, handleMessage_0), // 0x01F0A000 0xF88A000
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A003, handleMessage_1),
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A004, handleMessage_2), // oil pressure
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A005, handleMessage_3), // launch active (laungh ramp time?)
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A007, handleMessage_4), // oil temp logging
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A008, handleMessage_5), // launch rpm fuel cut
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A010, handleMessage_6), // Sparkcut fuelcut
+        ACANPrimaryFilter(kData, kExtended, 0x01F0A012, handleMessage_7), // tc_slip measured
+        ACANPrimaryFilter(kData, kExtended, 0x0000A0000, handleMessage_8),
+        ACANPrimaryFilter(kData, kExtended, 0x0000A0001, handleMessage_9),
+        ACANPrimaryFilter(kData, kExtended, 0x0000A0003, handleMessage_10),
+        ACANPrimaryFilter(kData, kExtended, 0x0000A0004, handleMessage_11)
+
+    };
 
     Serial.println("ACANSettings done");
 
