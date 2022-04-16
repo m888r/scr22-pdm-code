@@ -5,7 +5,7 @@ namespace SCRCAN {
   // static CAN_message_t frame; //FOR CAN Broadcasting if needed
   // ID: 0x01F0A000
   int RPM;
-  unsigned char throttle;
+  unsigned char throttle = 0;
   signed char coolant_temp;
 
   // ID: 0x01F0A003
@@ -60,12 +60,14 @@ namespace SCRCAN {
   //----------------- CAN Handling -----------------//
   static void handleMessage_0(const CANMessage &frame)
   {
+    Serial.println("Read throttle");
     RPM = 0.39063 * long((256 * long(frame.data[0]) + frame.data[1]));
     throttle = 0.0015259 * long((256 * long(frame.data[4]) + frame.data[5]));
     coolant_temp = frame.data[7];
   }
   static void handleMessage_1(const CANMessage &frame)
   {
+    Serial.println("Read voltage");
     // converted from kph to mph
     speed = 0.00390625 * long((256 * long(frame.data[2]) + frame.data[3]));
     gear = frame.data[4];
@@ -74,21 +76,25 @@ namespace SCRCAN {
   }
   static void handleMessage_2(const CANMessage &frame)
   {
+    Serial.println("Read fuel/oil");
     fuel_pressure = 0.580151 * frame.data[3];
     oil_pressure = 0.580151 * frame.data[4];
     VE = frame.data[2];
   }
   static void handleMessage_3(const CANMessage &frame)
   {
+    Serial.println("Read launch ctrl");
     launch_active = frame.data[8]; // Check, its bit 1 of byte 7 in the frame.
   }
   static void handleMessage_4(const CANMessage &frame)
   {
+    Serial.print("Read oil temp");
     oil_temp = frame.data[4] - 50;
     logging = frame.data[8]; // Check, its bit 1 of byte 7 in the frame.
   }
   static void handleMessage_5(const CANMessage &frame)
   {
+    Serial.println("Read launch rpm");
     launch_rpm = 0.39063 * long((256 * long(frame.data[3]) + frame.data[4]));
 
     if (frame.data[7] == 0)
@@ -102,6 +108,7 @@ namespace SCRCAN {
   }
   static void handleMessage_6(const CANMessage &frame)
   {
+    Serial.println("Fuel cut");
     TC_FuelCut = frame.data[0] * 0.392157;  //% Fuel Cut
     TC_SparkCut = frame.data[1] * 0.392157; //% Spark Cut
     TC_Mode = frame.data[4];                // TC Strength
