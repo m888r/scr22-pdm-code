@@ -186,9 +186,4 @@ namespace SCRCAN {
     }
     Serial.println("End Setup CAN");
   }
-
-  void loop() {
-    ACAN::can0.dispatchReceivedMessage ();
-  }
-
 }
