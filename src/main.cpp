@@ -205,7 +205,7 @@ void loop() {
 
   if (millis() - lastPrint >= 100) {
     lastPrint = millis();
-    Serial.printf("coolant:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", coolant_temp, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
