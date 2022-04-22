@@ -60,7 +60,7 @@ namespace SCRCAN
   extern int z_yaw;
 
   /**
-   * @brief initialize mcp2561 + CAN transmission
+   * @brief initialize mcp2561 + CAN transmission for AEM packets
    * 
    * @param pin MCP2561 STBY pin if needed
    */
@@ -70,5 +70,12 @@ namespace SCRCAN
    * @brief loop to retrieve CAN data and store
    * 
    */
-  void loop();
+  void recv();
+
+  /**
+   * @brief test send CAN data
+   * 
+   * @param data a float data to send, some kinda current probs
+   */
+  void sendTest(float data);
 }

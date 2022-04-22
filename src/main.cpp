@@ -7,40 +7,29 @@
 
 #include <SCRCAN.hpp>
 
-unsigned int RPM = 5000;
-unsigned char speed = 0;
-unsigned char throttle = 0;
 
-//ID: 0x5F1
+#define FAN_OVER_CURRENT 20
 
-//ID: 0x5F2
-unsigned char oil_temp = 105;
+// unsigned int RPM = 5000;
+// unsigned char speed = 0;
+// unsigned char throttle = 0;
 
-//ID: 0x5F3
-unsigned char oil_pressure = 70;
-unsigned char coolant_temp = 105;
+// //ID: 0x5F1
 
-//ID: 0x5F4
-unsigned int gear;
-unsigned int b_voltage;
+// //ID: 0x5F2
+// unsigned char oil_temp = 105;
+
+// //ID: 0x5F3
+// unsigned char oil_pressure = 70;
+// unsigned char coolant_temp = 105;
+
+// //ID: 0x5F4
+// unsigned int gear;
+// unsigned int b_voltage;
 
 ///// ADC0 ////
 
 ADC* adc = new ADC();
-
-//  Function Prototypes
-static void handleMessage_0 (const CANMessage & frame);
-static void handleMessage_1 (const CANMessage & frame);
-static void handleMessage_2 (const CANMessage & frame);
-static void handleMessage_3 (const CANMessage & frame);
-static void handleMessage_4 (const CANMessage & frame);
-static void handleMessage_5 (const CANMessage & frame);
-static void handleMessage_6 (const CANMessage & frame);
-static void handleMessage_7 (const CANMessage & frame);
-static void handleMessage_8 (const CANMessage & frame);
-static void handleMessage_9 (const CANMessage & frame);
-static void handleMessage_10 (const CANMessage & frame);
-static void handleMessage_11 (const CANMessage & frame);
 
 const uint8_t CURR_FUEL = A3;
 const uint8_t CURR_H2O = A2;
@@ -56,36 +45,8 @@ int i = 0;
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("Entered Setup");
 
-
-  ACANSettings settings (500*1000); 
-  const ACANPrimaryFilter primaryFilters [] = {
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A000, handleMessage_0),// 0x01F0A000 0xF88A000
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A003, handleMessage_1), 
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A004, handleMessage_2), //oil pressure
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A005, handleMessage_3), //launch active (laungh ramp time?)
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A007, handleMessage_4), //oil temp logging
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A008, handleMessage_5), //launch rpm fuel cut
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A010, handleMessage_6), //Sparkcut fuelcut
-      ACANPrimaryFilter (kData, kExtended, 0x01F0A012, handleMessage_7), //tc_slip measured
-      ACANPrimaryFilter (kData, kExtended, 0x0000A0000, handleMessage_8),
-      ACANPrimaryFilter (kData, kExtended, 0x0000A0001, handleMessage_9),
-      ACANPrimaryFilter (kData, kExtended, 0x0000A0003, handleMessage_10),
-      ACANPrimaryFilter (kData, kExtended, 0x0000A0004, handleMessage_11)
-  };
-  Serial.println("ACANSettings done");
-
-  const uint32_t errorCode = ACAN::can0.begin (settings, primaryFilters, 12) ;
-  if (0 == errorCode) {
-    Serial.println ("can0 ok") ;
-  }
-  else{
-    Serial.print ("Error can0: ") ;
-    Serial.println (errorCode) ;
-  }
-
-  Serial.println("End Setup");
+  SCRCAN::init();
 
   pinMode(A3, INPUT); // CURR_FUEL
   pinMode(A2, INPUT); // CURR_H2O
@@ -124,12 +85,14 @@ int fanTargetSpeed = 4096;
 const float slewRate = 4096.0 / 4000.0; // 4 seconds to reach max speed
 
 int lastPrint = 0;
+int lastRecv = 0;
 float lastFanCurrent = 0;
 float lastFuelCurrent = 0;
 float lastWaterCurrent = 0;
 float lastMainCurrent = 0;
 
 int lastTime = 0;
+int currTime = 0;
 
 void changeFanState(slewCtrl state) {
   lastFanState = fanState;
@@ -137,9 +100,9 @@ void changeFanState(slewCtrl state) {
 }
 
 void loop() {
+  currTime = millis();
 
-  ACAN::can0.dispatchReceivedMessage ();
-  int dT = millis() - lastTime;
+  int dT = currTime - lastTime;
   lastTime = lastTime + dT;
 
   // trapezoid speed control state machine
@@ -203,78 +166,22 @@ void loop() {
   lastMainCurrent = mainCurrent;
   lastWaterCurrent = waterCurrent;
 
-  if (millis() - lastPrint >= 100) {
-    lastPrint = millis();
-    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+  if (fanCurrent >= FAN_OVER_CURRENT) {
+    changeFanState(slewCtrl::STOP);
+    // note that this wont stop it if the state gets changed another way, i.e. trapezoid control
+  }
+
+  if (currTime - lastPrint >= 100) {
+    lastPrint = currTime;
+    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
 
-  delayMicroseconds(50);  
-}
+  if (currTime - lastRecv >= 1) {
+    lastRecv = currTime;
+    SCRCAN::recv();
+  }
 
-//----------------- CAN Handling -----------------//
-static void handleMessage_0 (const CANMessage & frame) {
-  RPM = 0.39063 * long((256*long(frame.data[0]) + frame.data[1]));
-  throttle = 0.0015259 * long((256*long(frame.data[4]) + frame.data[5]));
-  coolant_temp = frame.data[7];
-}
-static void handleMessage_1 (const CANMessage & frame) {
-  // converted from kph to mph
-  speed = 0.00390625 * long((256*long(frame.data[2]) + frame.data[3]));
-  gear = frame.data[4];
-  b_voltage = 0.0002455 * long((256*long(frame.data[6]) + frame.data[7]));
-  
-}
-static void handleMessage_2 (const CANMessage & frame) {
-  //fuel_pressure = 0.580151 * frame.data[3];
-  oil_pressure = 0.580151 * frame.data[4];
-  //VE = frame.data[2];
-}
-static void handleMessage_3 (const CANMessage & frame) {
-  //launch_active = frame.data[8]; // Check, its bit 1 of byte 7 in the frame.
-}
-static void handleMessage_4 (const CANMessage & frame) {
-  oil_temp = frame.data[4] - 50;
-  //logging  = frame.data[8];  // Check, its bit 1 of byte 7 in the frame.
-}
-static void handleMessage_5 (const CANMessage & frame) {
-  // launch_rpm = 0.39063 * long((256*long(frame.data[3]) + frame.data[4]));
-      
-  // if(frame.data[7] == 0){
-  //     error = 0;
-  // }
-  // else{
-  //     error = 1;
-  // }
-}
-static void handleMessage_6 (const CANMessage & frame) {
-  // TC_FuelCut = frame.data[0] * 0.392157; //% Fuel Cut
-  // TC_SparkCut = frame.data[1] * 0.392157;//% Spark Cut
-  // TC_Mode = frame.data[4]; //TC Strength
-}
-static void handleMessage_7 (const CANMessage & frame) {
-  //converted from kph to mph
-  // traction_control = 0.01242742 * long((256*long(frame.data[0]) + frame.data[1]));
-  // TC_SlipMeas = 0.01242742 * long((256*long(frame.data[2]) + frame.data[3])); //0 - 1310.7 kph
-}
-static void handleMessage_8 (const CANMessage & frame) {
-  // gps_lat = (frame.data[0]-2147483647.5)*4.19095159*pow(10,-8);
-  // gps_long = (frame.data[4]-2147483647.5)*8.38190317*pow(10,-8); // assuming deg range uses all 32 bits
-}
-static void handleMessage_9 (const CANMessage & frame) {
-  // gps_speed = 0.01 * long((256*long(frame.data[0]) + frame.data[1]));
-  // gps_altitude = long((256*long(frame.data[2]) + frame.data[3])); 
-  // this is signed, not sure how the library converts it; it is signed by magnitude, not 2's complement
-}
-static void handleMessage_10 (const CANMessage & frame) {
-  // all 16 bit signed... 
-  // x_acceleration = 0.000244141 * long((256*long(frame.data[0]) + frame.data[1])); 
-  // y_acceleration = 0.000244141 * long((256*long(frame.data[2]) + frame.data[3])); 
-  // z_acceleration = 0.000244141 * long((256*long(frame.data[4]) + frame.data[5])); 
-}
-static void handleMessage_11 (const CANMessage & frame) {
-  // x_yaw = 0.015258789 * long((256*long(frame.data[0]) + frame.data[1])); 
-  // y_yaw = 0.015258789 * long((256*long(frame.data[2]) + frame.data[3])); 
-  // z_yaw = 0.015258789 * long((256*long(frame.data[4]) + frame.data[5])); 
+  delayMicroseconds(50);  
 }
