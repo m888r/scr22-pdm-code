@@ -207,8 +207,8 @@ namespace SCRCAN
     // we're sending data not requesting, so this is a data frame
     frame.rtr = false;
     // use standard frame IDs for our ones
-    frame.ext = false;
-    frame.id = 0x542; // arbitrary id
+    frame.ext = true;
+    frame.id = 0x000542; // arbitrary id
     // frame.id = millis () & 0x7FE; 
 
     dataStorage.dataDouble = data;

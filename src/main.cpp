@@ -173,14 +173,15 @@ void loop() {
 
   if (currTime - lastPrint >= 100) {
     lastPrint = currTime;
-    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    //Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
 
   if (currTime - lastRecv >= 1) {
     lastRecv = currTime;
-    SCRCAN::recv();
+    //SCRCAN::recv();
+    SCRCAN::sendTest(fanCurrent);
   }
 
   delayMicroseconds(50);  

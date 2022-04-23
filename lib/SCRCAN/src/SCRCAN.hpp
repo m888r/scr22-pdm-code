@@ -65,7 +65,7 @@ namespace SCRCAN
    * @param pin MCP2561 STBY pin if needed
    */
   void init(int pin = -1);
-
+  
   /**
    * @brief loop to retrieve CAN data and store
    * 
@@ -77,5 +77,5 @@ namespace SCRCAN
    * 
    * @param data a float data to send, some kinda current probs
    */
-  void sendTest(float data);
+  void sendTest(double data);
 }
