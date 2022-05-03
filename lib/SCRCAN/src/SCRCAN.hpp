@@ -5,7 +5,7 @@
 
 namespace SCRCAN
 {
-//----------------- CAN -----------------//
+  //----------------- CAN -----------------//
   // static CAN_message_t frame; //FOR CAN Broadcasting if needed
   // ID: 0x01F0A000
   extern int RPM;
@@ -61,20 +61,20 @@ namespace SCRCAN
 
   /**
    * @brief initialize mcp2561 + CAN transmission for AEM packets
-   * 
+   *
    * @param pin MCP2561 STBY pin if needed
    */
   void init(int pin = -1);
-  
+
   /**
    * @brief loop to retrieve CAN data and store
-   * 
+   *
    */
   void recv();
 
   /**
    * @brief test send CAN data
-   * 
+   *
    * @param data a float data to send, some kinda current probs
    */
   void sendTest(double data);

@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include<ADC.h>
 #include<ADC_util.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
-#define _TASK_MICRO_RES
-#include <TaskScheduler.h> // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
+//#define _TASK_MICRO_RES
+//#include <TaskScheduler.h> // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
 
 #include <SCRCAN.hpp>
 
@@ -180,8 +182,8 @@ void loop() {
 
   if (currTime - lastRecv >= 1) {
     lastRecv = currTime;
-    //SCRCAN::recv();
-    SCRCAN::sendTest(fanCurrent);
+    SCRCAN::recv();
+    //SCRCAN::sendTest(fanCurrent);
   }
 
   delayMicroseconds(50);  
