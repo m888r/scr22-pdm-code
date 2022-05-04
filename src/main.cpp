@@ -49,6 +49,8 @@ void setup() {
   Serial.begin(9600);
 
   SCRCAN::init();
+  IntervalTimer CANRead;
+  CANRead.begin(SCRCAN::recv, 50);
 
   pinMode(A3, INPUT); // CURR_FUEL
   pinMode(A2, INPUT); // CURR_H2O
@@ -178,14 +180,14 @@ void loop() {
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
-  static auto lastRecv = millis();
-  if (currTime - lastRecv >= 40) {
-    lastRecv = currTime;
-    for (i = 0; i < 40; i++) {
-      SCRCAN::recv();
-    }
-    //SCRCAN::sendTest(fanCurrent);
-  }
+  // static auto lastRecv = millis();
+  // if (currTime - lastRecv >= 40) {
+  //   lastRecv = currTime;
+  //   for (i = 0; i < 40; i++) {
+  //     SCRCAN::recv();
+  //   }
+  //   //SCRCAN::sendTest(fanCurrent);
+  // }
 
   delayMicroseconds(50);  
 }

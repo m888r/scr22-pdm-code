@@ -201,7 +201,9 @@ namespace SCRCAN
 
   void recv()
   {
-    can0.events();
+    while (can0.getRXQueueCount() > 0) {
+      can0.events();
+    }
   }
 
   typedef union
