@@ -86,8 +86,6 @@ int fanSpeed = 0;
 int fanTargetSpeed = 4096;
 const float slewRate = 4096.0 / 4000.0; // 4 seconds to reach max speed
 
-int lastPrint = 0;
-int lastRecv = 0;
 float lastFanCurrent = 0;
 float lastFuelCurrent = 0;
 float lastWaterCurrent = 0;
@@ -173,14 +171,15 @@ void loop() {
     // note that this wont stop it if the state gets changed another way, i.e. trapezoid control
   }
 
+  static auto lastPrint = millis();
   if (currTime - lastPrint >= 100) {
     lastPrint = currTime;
-    //Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
-
-  if (currTime - lastRecv >= 1) {
+  static auto lastRecv = millis();
+  if (currTime - lastRecv >= 40) {
     lastRecv = currTime;
     SCRCAN::recv();
     //SCRCAN::sendTest(fanCurrent);
