@@ -181,7 +181,9 @@ void loop() {
   static auto lastRecv = millis();
   if (currTime - lastRecv >= 40) {
     lastRecv = currTime;
-    SCRCAN::recv();
+    for (i = 0; i < 40; i++) {
+      SCRCAN::recv();
+    }
     //SCRCAN::sendTest(fanCurrent);
   }
 

@@ -145,18 +145,25 @@ namespace SCRCAN
   }
 
   FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16> can0;
-  const int NUM_TX_MAILBOXES = 0;
+  const int NUM_TX_MAILBOXES = 1;
   const int NUM_RX_MAILBOXES = 12;
   void init(int pin)
   {
     can0.begin();
     can0.setBaudRate(500000);
     can0.setMaxMB(NUM_TX_MAILBOXES + NUM_RX_MAILBOXES);
-    for (int i = 0; i < 12; i++) { // configure all the AEM's extended frames
+    for (int i = 0; i < NUM_RX_MAILBOXES; i++)
+    { // configure all the AEM's extended frames
       can0.setMB((FLEXCAN_MAILBOX)i, RX, EXT);
+    }
+    for (int i = NUM_RX_MAILBOXES - 1; i < NUM_TX_MAILBOXES + NUM_RX_MAILBOXES; i++)
+    {
+      can0.setMB((FLEXCAN_MAILBOX)i, TX, STD); // for loopback
     }
     can0.setMBFilter(REJECT_ALL);
     can0.enableMBInterrupts();
+    // can0.enableFIFO();
+    // can0.enableFIFOInterrupt();
     can0.onReceive(MB0, AEM_handleMessage_0);
     can0.onReceive(MB1, AEM_handleMessage_1);
     can0.onReceive(MB2, AEM_handleMessage_2);
@@ -202,11 +209,32 @@ namespace SCRCAN
     double dataDouble;
     uint64_t dataInt64;
     uint32_t dataInt32[2];
+    uint8_t dataInt8[8];
   } conversionUnion;
 
   conversionUnion dataStorage;
   void sendTest(double data)
   {
+
+    static auto lastSent = millis();
+    if (millis() - lastSent > 100)
+    {
+
+      CAN_message_t frame;
+      frame.id = 0x7FE;
+      dataStorage.dataDouble = data;
+      Serial.printf("Attempting to send: %d, %d, %d, %d etc. ", dataStorage.dataInt8[0], dataStorage.dataInt8[1], dataStorage.dataInt8[2], dataStorage.dataInt8[3]);
+
+      for (int i = 0; i < 8; i++)
+      {
+        frame.buf[i] = dataStorage.dataInt8[i];
+      }
+
+      frame.mb = MB12;
+
+      can0.write(frame);
+    }
+
     // // going to use can0, even though we're also receiving on it
     // CANMessage frame;
     // // we're sending data not requesting, so this is a data frame
