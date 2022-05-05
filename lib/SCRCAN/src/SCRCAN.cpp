@@ -201,7 +201,8 @@ namespace SCRCAN
 
   void recv()
   {
-    while (can0.getRXQueueCount() > 0) {
+    auto receiveTimeout = micros();
+    while (can0.getRXQueueCount() > 0 && micros() - receiveTimeout < 500) {
       can0.events();
     }
   }
