@@ -84,13 +84,13 @@ namespace SCRCAN
   void AEM_handleMessage_3(const CAN_message_t &frame)
   {
     // Serial.println("Read launch ctrl");
-    launch_active = frame.buf[8]; // Check, its bit 1 of byte 7 in the frame.
+    launch_active = frame.buf[7]; // Check, its bit 1 of byte 7 in the frame.
   }
   void AEM_handleMessage_4(const CAN_message_t &frame)
   {
     // Serial.print("Read oil temp");
     oil_temp = frame.buf[4] - 50;
-    logging = frame.buf[8]; // Check, its bit 1 of byte 7 in the frame.
+    logging = frame.buf[7]; // Check, its bit 1 of byte 7 in the frame.
   }
   void AEM_handleMessage_5(const CAN_message_t &frame)
   {
