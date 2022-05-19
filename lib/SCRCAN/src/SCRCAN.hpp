@@ -58,6 +58,9 @@ namespace SCRCAN
   extern volatile int y_yaw;
   extern volatile int z_yaw;
 
+  // ID: 0x7FE
+  extern volatile double doubleTest;
+
   /**
    * @brief initialize mcp2561 + CAN transmission for AEM packets
    *

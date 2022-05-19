@@ -57,6 +57,9 @@ namespace SCRCAN
   volatile int y_yaw;
   volatile int z_yaw;
 
+  // ID: 0x7FE
+  volatile double doubleTest;
+
   //----------------- CAN Handling -----------------//
   void AEM_handleMessage_0(const CAN_message_t &frame)
   {
@@ -144,6 +147,32 @@ namespace SCRCAN
     z_yaw = 0.015258789 * long((256 * long(frame.buf[4]) + frame.buf[5]));
   }
 
+  void canSniff(const CAN_message_t &msg)
+  {
+    Serial.print("MB ");
+    Serial.print(msg.mb);
+    Serial.print("  OVERRUN: ");
+    Serial.print(msg.flags.overrun);
+    Serial.print("  LEN: ");
+    Serial.print(msg.len);
+    Serial.print(" EXT: ");
+    Serial.print(msg.flags.extended);
+    Serial.print(" TS: ");
+    Serial.print(msg.timestamp);
+    Serial.print(" ID: ");
+    Serial.print(msg.id, HEX);
+    Serial.print(" Buffer: ");
+    for (uint8_t i = 0; i < msg.len; i++)
+    {
+      Serial.print(msg.buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+
+  // ID 0x7FE
+  void PDM_handleMessage_12(const CAN_message_t &frame);
+
   FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16> can0;
   const int NUM_TX_MAILBOXES = 1;
   const int NUM_RX_MAILBOXES = 12;
@@ -151,19 +180,26 @@ namespace SCRCAN
   {
     can0.begin();
     can0.setBaudRate(500000);
+    //can0.enableLoopBack();
     can0.setMaxMB(NUM_TX_MAILBOXES + NUM_RX_MAILBOXES);
     for (int i = 0; i < NUM_RX_MAILBOXES; i++)
-    { // configure all the AEM's extended frames
+    { // set all the AEM's extended frames
       can0.setMB((FLEXCAN_MAILBOX)i, RX, EXT);
     }
-    for (int i = NUM_RX_MAILBOXES - 1; i < NUM_TX_MAILBOXES + NUM_RX_MAILBOXES; i++)
-    {
-      can0.setMB((FLEXCAN_MAILBOX)i, TX, STD); // for loopback
-    }
+    // for (int i = NUM_RX_MAILBOXES; i < NUM_TX_MAILBOXES + NUM_RX_MAILBOXES; i++)
+    // {
+    //   Serial.printf("Set mailbox %d to TX\n");
+    //   can0.setMB((FLEXCAN_MAILBOX)i, TX);
+    // }
+    //can0.setMB(MB12, RX, STD);
+    //can0.setMB(MB13, TX, STD);
+
     can0.setMBFilter(REJECT_ALL);
     can0.enableMBInterrupts();
-    // can0.enableFIFO();
-    // can0.enableFIFOInterrupt();
+    //can0.enableFIFO();
+    //can0.enableFIFOInterrupt();
+    //can0.onReceive(canSniff);
+
     can0.onReceive(MB0, AEM_handleMessage_0);
     can0.onReceive(MB1, AEM_handleMessage_1);
     can0.onReceive(MB2, AEM_handleMessage_2);
@@ -176,6 +212,7 @@ namespace SCRCAN
     can0.onReceive(MB9, AEM_handleMessage_9);
     can0.onReceive(MB10, AEM_handleMessage_10);
     can0.onReceive(MB11, AEM_handleMessage_11);
+    //can0.onReceive(MB12, PDM_handleMessage_12);
     can0.setMBUserFilter(MB0, 0x01F0A000, 0xFF); // 0x01F0A000 0xF88A000
     can0.setMBUserFilter(MB1, 0x01F0A003, 0xFF);
     can0.setMBUserFilter(MB2, 0x01F0A004, 0xFF); // oil pressure
@@ -188,11 +225,13 @@ namespace SCRCAN
     can0.setMBUserFilter(MB9, 0x0000A0001, 0xFF);
     can0.setMBUserFilter(MB10, 0x0000A0003, 0xFF);
     can0.setMBUserFilter(MB11, 0x0000A0004, 0xFF);
+    //can0.setMBUserFilter(MB12, 0x7FE, 0xFF);
     can0.mailboxStatus();
 
     // STBY pin on MCP2561 transceiver needs to be set LOW to turn it on
     if (pin != -1)
     {
+      Serial.printf("Set Digital %d LOW for STBY\n", pin);
       pinMode(pin, OUTPUT);
       digitalWrite(pin, LOW);
     }
@@ -202,7 +241,8 @@ namespace SCRCAN
   void recv()
   {
     auto receiveTimeout = micros();
-    while (can0.getRXQueueCount() > 0 && micros() - receiveTimeout < 500) {
+    while (can0.getRXQueueCount() > 0 && micros() - receiveTimeout < 500)
+    {
       can0.events();
     }
   }
@@ -226,16 +266,21 @@ namespace SCRCAN
       CAN_message_t frame;
       frame.id = 0x7FE;
       dataStorage.dataDouble = data;
-      Serial.printf("Attempting to send: %d, %d, %d, %d etc. ", dataStorage.dataInt8[0], dataStorage.dataInt8[1], dataStorage.dataInt8[2], dataStorage.dataInt8[3]);
+      Serial.printf("Attempting to send: ");
+      for (int i = 0; i < 8; i++)
+      {
+        Serial.printf("%d, ", dataStorage.dataInt8[i]);
+      }
+      Serial.printf("double = %1.4f\n", dataStorage.dataDouble);
 
       for (int i = 0; i < 8; i++)
       {
         frame.buf[i] = dataStorage.dataInt8[i];
       }
 
-      frame.mb = MB12;
+      frame.mb = MB13;
 
-      can0.write(frame);
+      can0.write(MB13, frame);
     }
 
     // // going to use can0, even though we're also receiving on it
@@ -258,5 +303,18 @@ namespace SCRCAN
     // } else {
     //   Serial.printf("tried to send and failed\n");
     // }
+  }
+
+  // ID 0x7FE
+  conversionUnion messageHandlingDataStorage12;
+  void PDM_handleMessage_12(const CAN_message_t &frame)
+  {
+    // for (int i = 0; i < 8; i++)
+    // {
+    //   messageHandlingDataStorage12.dataInt8[i] = frame.buf[i];
+    // }
+    memcpy(messageHandlingDataStorage12.dataInt8, frame.buf, sizeof(frame.buf));
+    doubleTest = messageHandlingDataStorage12.dataDouble;
+    printf("Received PDM msg! %1.4f\n", doubleTest);
   }
 }

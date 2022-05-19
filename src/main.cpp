@@ -45,11 +45,13 @@ int CTRLarr[3] = {9, 21, 22};
 uint8_t CTRL = 9; // 9 fuel, 21 h2o, 22 fan
 int i = 0;
 
+
+IntervalTimer CANRead;
 void setup() {
   Serial.begin(9600);
 
-  SCRCAN::init();
-  IntervalTimer CANRead;
+  SCRCAN::init(6);
+
   CANRead.begin(SCRCAN::recv, 50);
 
   pinMode(A3, INPUT); // CURR_FUEL
@@ -101,6 +103,8 @@ void changeFanState(slewCtrl state) {
   fanState = state;
 }
 
+// on the pdm pin 6 on DTM = CAN high pin 7 = CAN LOW
+// CAN high red+white CAN low blue+white
 void loop() {
   currTime = millis();
 
@@ -176,7 +180,7 @@ void loop() {
   static auto lastPrint = millis();
   if (currTime - lastPrint >= 100) {
     lastPrint = currTime;
-    Serial.printf("throttle:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    Serial.printf("test:%1.4f,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::voltage, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   }
@@ -184,9 +188,14 @@ void loop() {
   // if (currTime - lastRecv >= 40) {
   //   lastRecv = currTime;
   //   for (i = 0; i < 40; i++) {
-  //     SCRCAN::recv();
+       //SCRCAN::recv();
   //   }
   //   //SCRCAN::sendTest(fanCurrent);
+  // }
+
+  // static auto lastSend = millis();
+  // if (currTime - lastSend >= 100) {
+  //   SCRCAN::sendTest(50);
   // }
 
   delayMicroseconds(50);  
