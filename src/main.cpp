@@ -1,9 +1,6 @@
 #include <Arduino.h>
 #include<ADC.h>
 #include<ADC_util.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
 //#define _TASK_MICRO_RES
 //#include <TaskScheduler.h> // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
 
@@ -37,6 +34,9 @@ const uint8_t CURR_FUEL = A3;
 const uint8_t CURR_H2O = A2;
 const uint8_t CURR_FAN = A1;
 const uint8_t CURR_12V = A0;
+const uint8_t FAN_SGN = 10;
+const uint8_t H2O_SGN = 11;
+const uint8_t FUEL_SGN = 12;
 const auto FAN = 22;
 const auto H2O = 21;
 const auto FUEL = 9;
@@ -45,14 +45,93 @@ int CTRLarr[3] = {9, 21, 22};
 uint8_t CTRL = 9; // 9 fuel, 21 h2o, 22 fan
 int i = 0;
 
+// void portc_isr(void) {
+//   Serial.printf("portc fired\n");
+// }
+
+bool lastFanPin = 0;
+bool lastH2OPin = 0;
+bool lastFuelPin = 0;
+
+volatile int fanPWM = 0;
+volatile int h2oPWM = 0;
+volatile int fuelPWM = 0;
+int fanOnTime = 0;
+int fuelOnTime = 0;
+int h2oOnTime = 0;
+auto fuelPinOnTimestamp = micros();
+auto fuelPinOffTimestamp = micros();
+auto fanPinOnTimestamp = micros();
+auto fanPinOffTimestamp = micros();
+auto h2oPinOnTimestamp = micros();
+auto h2oPinOffTimestamp = micros();
+
+const int pwmUpdatePeriod = 100; // 50 microseconds period = 20khz
+const int aemPWMPeriod = 10000; // 10,000 microseconds = 10ms, 100hz
+
+// run this at 10x aem frequency at least
+void updatePWM() {
+  // according to the schematic, pins 10, 11, 12 should definitely be on port c 4 6 7 but I couldnt get dma working lol
+  int fanPin = digitalReadFast(FAN_SGN);
+  int h2oPin = digitalReadFast(H2O_SGN);
+  int fuelPin = digitalReadFast(FUEL_SGN);
+  //Serial.println(fuelPin);
+
+  if (fanPin != lastFanPin || micros() - fanPinOnTimestamp >= aemPWMPeriod) {
+    if (fanPin) {
+      fanPinOnTimestamp = micros();
+    } else {
+      fanPinOffTimestamp = micros();
+      fanOnTime = micros() - fanPinOnTimestamp;
+      fanPWM = (4096.0 * fanOnTime) / aemPWMPeriod;
+    }
+  }
+  if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
+    fanPWM = 0;
+  }
+
+  if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
+    if (h2oPin) {
+      h2oPinOnTimestamp = micros();
+    } else {
+      h2oPinOffTimestamp = micros();
+      h2oOnTime = micros() - h2oPinOnTimestamp;
+      h2oPWM = (4096.0 * h2oOnTime) / aemPWMPeriod;
+    }
+  }
+  if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
+    h2oPWM = 0;
+  }
+
+  if (fuelPin != lastFuelPin || micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
+    if (fuelPin) {
+      fuelPinOnTimestamp = micros();
+    } else {
+      fuelPinOffTimestamp = micros();
+      fuelOnTime = micros() - fuelPinOnTimestamp;
+      fuelPWM = (4096.0 * fuelOnTime) / aemPWMPeriod;
+    }
+  }
+  if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
+    fuelPWM = 0;
+  }
+
+  lastFanPin = fanPin;
+  lastH2OPin = h2oPin;
+  lastFuelPin = fuelPin;
+}
 
 IntervalTimer CANRead;
+IntervalTimer PWMRead;
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  //attachInterruptVector(IRQ_PORTC, &portc_isr);
 
-  SCRCAN::init(6);
 
-  CANRead.begin(SCRCAN::recv, 50);
+  //SCRCAN::init(6);
+
+  PWMRead.begin(updatePWM, pwmUpdatePeriod);
+  //CANRead.begin(SCRCAN::recv, 50);
 
   pinMode(A3, INPUT); // CURR_FUEL
   pinMode(A2, INPUT); // CURR_H2O
@@ -65,6 +144,10 @@ void setup() {
 
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
+
+  pinMode(FAN_SGN, INPUT);
+  pinMode(H2O_SGN, INPUT);
+  pinMode(FUEL_SGN, INPUT);
 
 
   adc->adc0->setAveraging(16);                                    // set number of averages
@@ -103,6 +186,9 @@ void changeFanState(slewCtrl state) {
   fanState = state;
 }
 
+int zeroCount;
+int oneCount;
+
 // on the pdm pin 6 on DTM = CAN high pin 7 = CAN LOW
 // CAN high red+white CAN low blue+white
 void loop() {
@@ -110,58 +196,59 @@ void loop() {
 
   int dT = currTime - lastTime;
   lastTime = lastTime + dT;
+  // normal bang bang + slew control --> accel until speed reached, then stay at speed unless target > or < speed
 
   // trapezoid speed control state machine
-  switch (fanState) {
-    case slewCtrl::ACCEL:
-      if (fanSpeed >= fanTargetSpeed) {
-        changeFanState(slewCtrl::MAX);
-      }
-      break;
-    case slewCtrl::MAX:
-      if (lastFanState != slewCtrl::MAX) {
-        startTime = millis();
-        changeFanState(slewCtrl::MAX);
-      }
-      if (millis() - startTime >= 2000) {
-        changeFanState(slewCtrl::DECEL);
-      }
-      break;
-    case slewCtrl::DECEL:
-      if (fanSpeed <= 0) {
-        changeFanState(slewCtrl::STOP);
-      }
-      break;
-    case slewCtrl::STOP:
-      if (lastFanState != slewCtrl::STOP) {
-        startTime = millis();
-        changeFanState(slewCtrl::STOP);
-      }
-      if (millis() - startTime >= 2000) {
-        changeFanState(slewCtrl::ACCEL);
-      }
-      break;
-  }
+  // switch (fanState) {
+  //   case slewCtrl::ACCEL:
+  //     if (fanSpeed >= fanTargetSpeed) {
+  //       changeFanState(slewCtrl::MAX);
+  //     }
+  //     break;
+  //   case slewCtrl::MAX:
+  //     if (lastFanState != slewCtrl::MAX) {
+  //       startTime = millis();
+  //       changeFanState(slewCtrl::MAX);
+  //     }
+  //     if (millis() - startTime >= 2000) {
+  //       changeFanState(slewCtrl::DECEL);
+  //     }
+  //     break;
+  //   case slewCtrl::DECEL:
+  //     if (fanSpeed <= 0) {
+  //       changeFanState(slewCtrl::STOP);
+  //     }
+  //     break;
+  //   case slewCtrl::STOP:
+  //     if (lastFanState != slewCtrl::STOP) {
+  //       startTime = millis();
+  //       changeFanState(slewCtrl::STOP);
+  //     }
+  //     if (millis() - startTime >= 2000) {
+  //       changeFanState(slewCtrl::ACCEL);
+  //     }
+  //     break;
+  // }
 
   // fan slew state machine
-  switch (fanState) {
-    case slewCtrl::ACCEL:
-      fanSpeed += (slewRate * dT);
-      break;
-    case slewCtrl::MAX:
-      fanSpeed = fanTargetSpeed;
-      break;
-    case slewCtrl::DECEL:
-      fanSpeed -= (slewRate * dT);
-      break;
-    case slewCtrl::STOP:
-      fanSpeed = 0;
-      break;
-  }
+  // switch (fanState) {
+  //   case slewCtrl::ACCEL:
+  //     fanSpeed += (slewRate * dT);
+  //     break;
+  //   case slewCtrl::MAX:
+  //     fanSpeed = fanTargetSpeed;
+  //     break;
+  //   case slewCtrl::DECEL:
+  //     fanSpeed -= (slewRate * dT);
+  //     break;
+  //   case slewCtrl::STOP:
+  //     fanSpeed = 0;
+  //     break;
+  // }
 
-  analogWrite(FAN, fanSpeed);
-  analogWrite(FUEL, 0);
-  analogWrite(H2O, 0);
+  analogWrite(FAN, fanPWM);
+  analogWrite(FUEL, fuelPWM);
+  analogWrite(H2O, h2oPWM);
 
   float fuelCurrent = 0.1*(adc->adc0->analogRead(CURR_FUEL)/3750.0) + 0.9*lastFuelCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
   float fanCurrent = 0.01*(adc->adc0->analogRead(CURR_FAN)/3750.0) + 0.99*lastFanCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
@@ -178,12 +265,21 @@ void loop() {
   }
 
   static auto lastPrint = millis();
-  if (currTime - lastPrint >= 100) {
+  if (currTime - lastPrint >= 50) {
     lastPrint = currTime;
-    Serial.printf("test:%1.4f,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::voltage, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    Serial.printf("test:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
+  
+    // if (digitalRead(10) || digitalRead(11) || digitalRead(12)) {
+    //   Serial.println("one of the load sgn on boi");
+    // }
+    // Serial.printf("%d\n", digitalRead(12));
+
+    //Serial.printf("%1.2f\n", fuelPWM / 4096.0);
+    //Serial.println(digitalRead(FUEL_SGN));
   }
+
   // static auto lastRecv = millis();
   // if (currTime - lastRecv >= 40) {
   //   lastRecv = currTime;
@@ -197,6 +293,9 @@ void loop() {
   // if (currTime - lastSend >= 100) {
   //   SCRCAN::sendTest(50);
   // }
+
+
+
 
   delayMicroseconds(50);  
 }
