@@ -83,11 +83,11 @@ void updatePWM() {
     } else {
       fanPinOffTimestamp = micros();
       fanOnTime = micros() - fanPinOnTimestamp;
-      fanPWM = (4096.0 * fanOnTime) / aemPWMPeriod;
+      fanPWM = 4096.0 - ((4096.0 * fanOnTime) / aemPWMPeriod);
     }
   }
   if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
-    fanPWM = 0;
+    fanPWM = 4096;
   }
 
   if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
@@ -96,11 +96,11 @@ void updatePWM() {
     } else {
       h2oPinOffTimestamp = micros();
       h2oOnTime = micros() - h2oPinOnTimestamp;
-      h2oPWM = (4096.0 * h2oOnTime) / aemPWMPeriod;
+      h2oPWM = 4096.0 - ((4096.0 * h2oOnTime) / aemPWMPeriod);
     }
   }
   if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
-    h2oPWM = 0;
+    h2oPWM = 4096;
   }
 
   if (fuelPin != lastFuelPin || micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
@@ -109,11 +109,11 @@ void updatePWM() {
     } else {
       fuelPinOffTimestamp = micros();
       fuelOnTime = micros() - fuelPinOnTimestamp;
-      fuelPWM = (4096.0 * fuelOnTime) / aemPWMPeriod;
+      fuelPWM = 4096.0 - ((4096.0 * fuelOnTime) / aemPWMPeriod);
     }
   }
   if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
-    fuelPWM = 0;
+    fuelPWM = 4096;
   }
 
   lastFanPin = fanPin;
