@@ -53,7 +53,7 @@ bool lastFanPin = 0;
 bool lastH2OPin = 0;
 bool lastFuelPin = 0;
 
-volatile double fanPWM = 0;
+volatile int fanPWM = 0;
 volatile int h2oPWM = 0;
 volatile int fuelPWM = 0;
 int fanOnTime = 0;
@@ -77,18 +77,28 @@ void updatePWM() {
   int fuelPin = digitalReadFast(FUEL_SGN);
   //Serial.println(fanPin);
 
-  if (fanPin != lastFanPin || micros() - fanPinOnTimestamp >= aemPWMPeriod) {
+  if (fanPin != lastFanPin) {
     if (fanPin) {
       fanPinOnTimestamp = micros();
     } else {
-      //fanPinOffTimestamp = micros();
+      fanPinOffTimestamp = micros();
       fanOnTime = micros() - fanPinOnTimestamp;
       fanPWM = 4096.0 - ((4096.0 * fanOnTime) / aemPWMPeriod);
     }
   }
-  // if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
-  //   fanPWM = 4096;
-  // }
+  if (micros() - fanPinOnTimestamp >= aemPWMPeriod) {
+    fanPinOnTimestamp = micros();
+    if (fanPin) {
+      fanPWM = 0;
+    }
+  }
+  if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
+    fanOnTime = 0;
+    fanPinOffTimestamp = micros();
+    if (!fanPin) {
+      fanPWM = 4096;
+    }
+  }
 
   // if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
   //   if (h2oPin) {
@@ -103,18 +113,27 @@ void updatePWM() {
   //   h2oPWM = 4096;
   // }
 
-  // if (fuelPin != lastFuelPin || micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
-  //   if (fuelPin) {
-  //     fuelPinOnTimestamp = micros();
-  //   } else {
-  //     fuelPinOffTimestamp = micros();
-  //     fuelOnTime = micros() - fuelPinOnTimestamp;
-  //     fuelPWM = 4096.0 - ((4096.0 * fuelOnTime) / aemPWMPeriod);
-  //   }
-  // }
-  // if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
-  //   fuelPWM = 4096;
-  // }
+  if (fuelPin != lastFuelPin) {
+    if (fuelPin) {
+      fuelPinOnTimestamp = micros();
+    } else {
+      fuelPinOffTimestamp = micros();
+      fuelOnTime = micros() - fuelPinOnTimestamp;
+      fuelPWM = 4096.0 - ((4096.0 * fuelOnTime) / aemPWMPeriod);
+    }
+  }
+  if (micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
+    fuelPinOnTimestamp = micros();
+    if (fuelPin) {
+      fuelPWM = 0;
+    }
+  }
+  if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
+    fuelPinOffTimestamp = micros();
+    if (!fuelPin) {
+      fuelPWM = 4096;
+    }
+  }
 
   lastFanPin = fanPin;
   lastH2OPin = h2oPin;
@@ -268,7 +287,7 @@ void loop() {
   if (currTime - lastPrint >= 1) {
     lastPrint = currTime;
     //Serial.println(fanPWM);
-    Serial.printf("%1.2f, %d\n", fanPWM, lastFanPin);
+    Serial.printf("%d, %d\n", fanPWM, lastFanPin);
     //Serial.printf("test:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", fanPWM, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
