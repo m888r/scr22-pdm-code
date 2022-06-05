@@ -53,7 +53,7 @@ bool lastFanPin = 0;
 bool lastH2OPin = 0;
 bool lastFuelPin = 0;
 
-volatile int fanPWM = 0;
+volatile double fanPWM = 0;
 volatile int h2oPWM = 0;
 volatile int fuelPWM = 0;
 int fanOnTime = 0;
@@ -75,46 +75,46 @@ void updatePWM() {
   int fanPin = digitalReadFast(FAN_SGN);
   int h2oPin = digitalReadFast(H2O_SGN);
   int fuelPin = digitalReadFast(FUEL_SGN);
-  //Serial.println(fuelPin);
+  //Serial.println(fanPin);
 
   if (fanPin != lastFanPin || micros() - fanPinOnTimestamp >= aemPWMPeriod) {
     if (fanPin) {
       fanPinOnTimestamp = micros();
     } else {
-      fanPinOffTimestamp = micros();
+      //fanPinOffTimestamp = micros();
       fanOnTime = micros() - fanPinOnTimestamp;
       fanPWM = 4096.0 - ((4096.0 * fanOnTime) / aemPWMPeriod);
     }
   }
-  if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
-    fanPWM = 4096;
-  }
+  // if (micros() - fanPinOffTimestamp >= aemPWMPeriod) {
+  //   fanPWM = 4096;
+  // }
 
-  if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
-    if (h2oPin) {
-      h2oPinOnTimestamp = micros();
-    } else {
-      h2oPinOffTimestamp = micros();
-      h2oOnTime = micros() - h2oPinOnTimestamp;
-      h2oPWM = 4096.0 - ((4096.0 * h2oOnTime) / aemPWMPeriod);
-    }
-  }
-  if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
-    h2oPWM = 4096;
-  }
+  // if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
+  //   if (h2oPin) {
+  //     h2oPinOnTimestamp = micros();
+  //   } else {
+  //     h2oPinOffTimestamp = micros();
+  //     h2oOnTime = micros() - h2oPinOnTimestamp;
+  //     h2oPWM = 4096.0 - ((4096.0 * h2oOnTime) / aemPWMPeriod);
+  //   }
+  // }
+  // if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
+  //   h2oPWM = 4096;
+  // }
 
-  if (fuelPin != lastFuelPin || micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
-    if (fuelPin) {
-      fuelPinOnTimestamp = micros();
-    } else {
-      fuelPinOffTimestamp = micros();
-      fuelOnTime = micros() - fuelPinOnTimestamp;
-      fuelPWM = 4096.0 - ((4096.0 * fuelOnTime) / aemPWMPeriod);
-    }
-  }
-  if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
-    fuelPWM = 4096;
-  }
+  // if (fuelPin != lastFuelPin || micros() - fuelPinOnTimestamp >= aemPWMPeriod) {
+  //   if (fuelPin) {
+  //     fuelPinOnTimestamp = micros();
+  //   } else {
+  //     fuelPinOffTimestamp = micros();
+  //     fuelOnTime = micros() - fuelPinOnTimestamp;
+  //     fuelPWM = 4096.0 - ((4096.0 * fuelOnTime) / aemPWMPeriod);
+  //   }
+  // }
+  // if (micros() - fuelPinOffTimestamp >= aemPWMPeriod) {
+  //   fuelPWM = 4096;
+  // }
 
   lastFanPin = fanPin;
   lastH2OPin = h2oPin;
@@ -145,9 +145,9 @@ void setup() {
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
 
-  pinMode(FAN_SGN, INPUT);
-  pinMode(H2O_SGN, INPUT);
-  pinMode(FUEL_SGN, INPUT);
+  pinMode(FAN_SGN, INPUT_PULLUP);
+  pinMode(H2O_SGN, INPUT_PULLUP);
+  pinMode(FUEL_SGN, INPUT_PULLUP);
 
 
   adc->adc0->setAveraging(16);                                    // set number of averages
@@ -246,9 +246,9 @@ void loop() {
   //     break;
   // }
 
-  analogWrite(FAN, fanPWM);
-  analogWrite(FUEL, fuelPWM);
-  analogWrite(H2O, h2oPWM);
+  analogWrite(FAN, 0);
+  analogWrite(FUEL, 0);
+  analogWrite(H2O, 0);
 
   float fuelCurrent = 0.1*(adc->adc0->analogRead(CURR_FUEL)/3750.0) + 0.9*lastFuelCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
   float fanCurrent = 0.01*(adc->adc0->analogRead(CURR_FAN)/3750.0) + 0.99*lastFanCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
@@ -265,9 +265,11 @@ void loop() {
   }
 
   static auto lastPrint = millis();
-  if (currTime - lastPrint >= 50) {
+  if (currTime - lastPrint >= 1) {
     lastPrint = currTime;
-    Serial.printf("test:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", SCRCAN::throttle, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
+    //Serial.println(fanPWM);
+    Serial.printf("%1.2f, %d\n", fanPWM, lastFanPin);
+    //Serial.printf("test:%d,fuel:%1.5f,fan:%1.5f,main:%1.5f,water:%1.5f\n", fanPWM, fuelCurrent, fanCurrent, mainCurrent, waterCurrent);
     // Serial.printf("fanpwm:%1.5f,fancurrent:%1.5f\n", fanSpeed * 5 / (double) fanTargetSpeed, fanCurrent);
     //Serial.printf("%1.5f, %1.5f\n", fanCurrent, mainCurrent);
   
