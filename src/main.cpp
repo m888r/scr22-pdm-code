@@ -4,7 +4,7 @@
 //#define _TASK_MICRO_RES
 //#include <TaskScheduler.h> // docs https://github.com/arkhipenko/TaskScheduler/wiki/API-Documentation
 
-#include <SCRCAN.hpp>
+//#include <SCRCAN.hpp>
 
 
 #define FAN_OVER_CURRENT 20
@@ -100,18 +100,28 @@ void updatePWM() {
     }
   }
 
-  // if (h2oPin != lastH2OPin || micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
-  //   if (h2oPin) {
-  //     h2oPinOnTimestamp = micros();
-  //   } else {
-  //     h2oPinOffTimestamp = micros();
-  //     h2oOnTime = micros() - h2oPinOnTimestamp;
-  //     h2oPWM = 4096.0 - ((4096.0 * h2oOnTime) / aemPWMPeriod);
-  //   }
-  // }
-  // if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
-  //   h2oPWM = 4096;
-  // }
+  if (h2oPin != lastH2OPin) {
+    if (h2oPin) {
+      h2oPinOnTimestamp = micros();
+    } else {
+      h2oPinOffTimestamp = micros();
+      h2oOnTime = micros() - h2oPinOnTimestamp;
+      h2oPWM = 4096.0 - ((4096.0 * h2oOnTime) / aemPWMPeriod);
+    }
+  }
+  if (micros() - h2oPinOnTimestamp >= aemPWMPeriod) {
+    h2oPinOnTimestamp = micros();
+    if (h2oPin) {
+      fanPWM = 0;
+    }
+  }
+  if (micros() - h2oPinOffTimestamp >= aemPWMPeriod) {
+    h2oOnTime = 0;
+    h2oPinOffTimestamp = micros();
+    if (!h2oPin) {
+      h2oPWM = 4096;
+    }
+  }
 
   if (fuelPin != lastFuelPin) {
     if (fuelPin) {
