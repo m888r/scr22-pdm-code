@@ -275,9 +275,9 @@ void loop() {
   //     break;
   // }
 
-  analogWrite(FAN, 0);
-  analogWrite(FUEL, 0);
-  analogWrite(H2O, 0);
+  analogWrite(FAN, fanPWM);
+  analogWrite(FUEL, fuelPWM);
+  analogWrite(H2O, h2oPWM);
 
   float fuelCurrent = 0.1*(adc->adc0->analogRead(CURR_FUEL)/3750.0) + 0.9*lastFuelCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
   float fanCurrent = 0.01*(adc->adc0->analogRead(CURR_FAN)/3750.0) + 0.99*lastFanCurrent;//* 3.3 / 1024.0 / 50.0 / 5.0;
